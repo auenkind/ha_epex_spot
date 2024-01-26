@@ -24,9 +24,9 @@ CONF_SOURCE_AWATTAR = "Awattar"
 CONF_SOURCE_EPEX_SPOT_WEB = "EPEX Spot Web Scraper"
 CONF_SOURCE_SMARD_DE = "SMARD.de"
 CONF_SOURCE_SMARTENERGY = "smartENERGY.at"
-CONF_SOURCE_STWHAS = "Stadtwerke Haßfurt"
-CONF_SOURCE_USERNAME = "source_username"
-CONF_SOURCE_PASSWORD = "source_password"
+CONF_SOURCE_ENERGY_ASSISTANT = "Energy Assistant"
+CONF_USERNAME = "source_username"
+CONF_PASSWORD = "source_password"
 
 # configuration options for net price calculation
 CONF_SURCHARGE_PERC = "percentage_surcharge"

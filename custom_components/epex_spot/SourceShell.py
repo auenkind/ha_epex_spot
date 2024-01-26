@@ -18,9 +18,9 @@ from .const import (
     CONF_SOURCE_EPEX_SPOT_WEB,
     CONF_SOURCE_SMARD_DE,
     CONF_SOURCE_SMARTENERGY,
-    CONF_SOURCE_STWHAS,
-    CONF_SOURCE_USERNAME,
-    CONF_SOURCE_PASSWORD,
+    CONF_SOURCE_ENERGY_ASSISTANT,
+    CONF_USERNAME,
+    CONF_PASSWORD,
     CONF_SURCHARGE_ABS,
     CONF_SURCHARGE_PERC,
     CONF_TAX,
@@ -29,7 +29,7 @@ from .const import (
     DEFAULT_TAX,
     EMPTY_EXTREME_PRICE_INTERVAL_RESP,
 )
-from .EPEXSpot import SMARD, Awattar, EPEXSpotWeb, smartENERGY, stwhas
+from .EPEXSpot import SMARD, Awattar, EPEXSpotWeb, smartENERGY, energyassistant
 from .extreme_price_interval import find_extreme_price_interval, get_start_times
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,12 +60,12 @@ class SourceShell:
             self._source = smartENERGY.smartENERGY(
                 market_area=config_entry.data[CONF_MARKET_AREA], session=session
             )
-        elif config_entry.data[CONF_SOURCE] == CONF_SOURCE_STWHAS:
-            self._source = stwhas.stwhas(
+        elif config_entry.data[CONF_SOURCE] == CONF_SOURCE_ENERGY_ASSISTANT:
+            self._source = energyassistant.EnergyAssistant(
                 market_area=config_entry.data[CONF_MARKET_AREA],
-                username=config_entry.data[CONF_SOURCE_USERNAME],
-                password=config_entry.data[CONF_SOURCE_PASSWORD],
-                # , session=session
+                username=config_entry.data[CONF_USERNAME],
+                password=config_entry.data[CONF_PASSWORD],
+                session=session,
             )
 
     @property

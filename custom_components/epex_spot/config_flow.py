@@ -13,25 +13,25 @@ from .const import (
     CONF_SOURCE_EPEX_SPOT_WEB,
     CONF_SOURCE_SMARD_DE,
     CONF_SOURCE_SMARTENERGY,
-    CONF_SOURCE_STWHAS,
+    CONF_SOURCE_ENERGY_ASSISTANT,
     CONF_SURCHARGE_ABS,
     CONF_SURCHARGE_PERC,
     CONF_TAX,
-    CONF_SOURCE_USERNAME,
-    CONF_SOURCE_PASSWORD,
+    CONF_USERNAME,
+    CONF_PASSWORD,
     DEFAULT_SURCHARGE_ABS,
     DEFAULT_SURCHARGE_PERC,
     DEFAULT_TAX,
     DOMAIN,
 )
-from .EPEXSpot import SMARD, Awattar, EPEXSpotWeb, smartENERGY, stwhas
+from .EPEXSpot import SMARD, Awattar, EPEXSpotWeb, smartENERGY, energyassistant
 
 CONF_SOURCE_LIST = (
     CONF_SOURCE_AWATTAR,
     CONF_SOURCE_EPEX_SPOT_WEB,
     CONF_SOURCE_SMARD_DE,
     CONF_SOURCE_SMARTENERGY,
-    CONF_SOURCE_STWHAS,
+    CONF_SOURCE_ENERGY_ASSISTANT,
 )
 
 
@@ -82,8 +82,8 @@ class EpexSpotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             areas = SMARD.SMARD.MARKET_AREAS
         elif self._source_name == CONF_SOURCE_SMARTENERGY:
             areas = smartENERGY.smartENERGY.MARKET_AREAS
-        elif self._source_name == CONF_SOURCE_STWHAS:
-            areas = stwhas.stwhas.MARKET_AREAS
+        elif self._source_name == CONF_SOURCE_ENERGY_ASSISTANT:
+            areas = energyassistant.EnergyAssistant.MARKET_AREAS
 
         data_schema = vol.Schema(
             {vol.Required(CONF_MARKET_AREA): vol.In(sorted(areas))}
@@ -94,15 +94,15 @@ class EpexSpotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
     async def async_step_market_area(self, user_input=None):
         if user_input is not None:
             self._market_area = user_input[CONF_MARKET_AREA]
-            if self._source_name == CONF_SOURCE_STWHAS:
+            if self._source_name == CONF_SOURCE_ENERGY_ASSISTANT:
                 data_schema = vol.Schema(
                     {
-                        vol.Required(CONF_SOURCE_USERNAME): TextSelector(
+                        vol.Required(CONF_USERNAME): TextSelector(
                             TextSelectorConfig(
                                 type=TextSelectorType.EMAIL, autocomplete="username"
                             )
                         ),
-                        vol.Required(CONF_SOURCE_PASSWORD): TextSelector(
+                        vol.Required(CONF_PASSWORD): TextSelector(
                             TextSelectorConfig(
                                 type=TextSelectorType.PASSWORD, autocomplete="password"
                             )
@@ -117,8 +117,8 @@ class EpexSpotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
 
     async def async_step_source_credentials(self, user_input=None):
         if user_input is not None:
-            self._username = user_input[CONF_SOURCE_USERNAME]
-            self._password = user_input[CONF_SOURCE_PASSWORD]
+            self._username = user_input[CONF_USERNAME]
+            self._password = user_input[CONF_PASSWORD]
             return await self.async_complete_config()
 
     async def async_complete_config(self):
@@ -134,8 +134,8 @@ class EpexSpotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             data={
                 CONF_SOURCE: self._source_name,
                 CONF_MARKET_AREA: self._market_area,
-                CONF_SOURCE_USERNAME: self._username,
-                CONF_SOURCE_PASSWORD: self._password,
+                CONF_USERNAME: self._username,
+                CONF_PASSWORD: self._password,
             },
         )
 
