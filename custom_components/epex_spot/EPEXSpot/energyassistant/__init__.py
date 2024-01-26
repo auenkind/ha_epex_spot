@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-import aiohttp
+import aiohttp, json
 from homeassistant.util import dt
 
 _LOGGER = logging.getLogger(__name__)
@@ -12,17 +12,13 @@ class Marketprice:
     UOM_CT_PER_kWh = "ct/kWh"
 
     def __init__(self, data):
-        assert data["unit"].lower() == self.UOM_EUR_PER_MWh.lower()
-        self._start_time = datetime.fromtimestamp(
-            data["start_timestamp"] / 1000, tz=timezone.utc
-        )
-        self._end_time = datetime.fromtimestamp(
-            data["end_timestamp"] / 1000, tz=timezone.utc
-        )
-        self._price_eur_per_mwh = float(data["marketprice"])
+        # assert data["unit"].lower() == self.UOM_EUR_PER_MWh.lower()
+        self._start_time = datetime.fromisoformat(data["datetime"])
+        self._end_time = self._start_time + timedelta(hours=1)
+        self._price_ct_per_kwh = data["price"]
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(start: {self._start_time.isoformat()}, end: {self._end_time.isoformat()}, marketprice: {self._price_eur_per_mwh} {self.UOM_EUR_PER_MWh})"  # noqa: E501
+        return f"{self.__class__.__name__}(start: {self._start_time.isoformat()}, end: {self._end_time.isoformat()}, marketprice: {self._price_ct_per_kwh} {self.UOM_CT_PER_kWh})"  # noqa: E501
 
     @property
     def start_time(self):
@@ -34,11 +30,11 @@ class Marketprice:
 
     @property
     def price_eur_per_mwh(self):
-        return self._price_eur_per_mwh
+        return round(self._price_ct_per_kwh * 10, 2)
 
     @property
     def price_ct_per_kwh(self):
-        return round(self._price_eur_per_mwh / 10, 3)
+        return self._price_ct_per_kwh
 
 
 def toEpochMilliSec(dt: datetime) -> int:
@@ -47,6 +43,7 @@ def toEpochMilliSec(dt: datetime) -> int:
 
 class EnergyAssistant:
     URL = "https://{api_domain}/api/stockmarket/v1/mapped-values"
+    LOGIN_URL = "https://{api_domain}/api/auth/v1/customer/login"
 
     MARKET_AREA_DOMAINS = {"Haßfurt": "hassfurt.energy-assistant.de"}
 
@@ -59,7 +56,11 @@ class EnergyAssistant:
         self._market_area = market_area
         self._username = username
         self._password = password
+
         self._url = self.URL.format(
+            api_domain=self.MARKET_AREA_DOMAINS[self._market_area]
+        )
+        self._login_url = self.LOGIN_URL.format(
             api_domain=self.MARKET_AREA_DOMAINS[self._market_area]
         )
         self._marketdata = []
@@ -85,18 +86,33 @@ class EnergyAssistant:
         return self._marketdata
 
     async def fetch(self):
-        pass
-        # data = await self._fetch_data(self._url)
-        # self._marketdata = self._extract_marketdata(data["data"])
+        tokenResp = await self._fetch_token()
+        token = tokenResp["token"]
+        data = await self._fetch_data(self._url, token)
+        self._marketdata = self._extract_marketdata(data["values"])
 
-    async def _fetch_data(self, url):
-        start = dt.now().replace(hour=0, minute=0, second=0, microsecond=0) - timedelta(
-            days=1
+    async def _fetch_token(self):
+        bodyData = {"email": self._username, "password": self._password}
+
+        async with self._session.post(self._login_url, json=bodyData) as resp:
+            resp.raise_for_status()
+            respData = resp.json()
+            return await respData
+
+    async def _fetch_data(self, url, token):
+        today = datetime.now()
+        start = datetime(today.year, today.month, today.day)
+        end = start + timedelta(days=2)
+
+        url = "{endpoint}/startdate/{startdate}Z/enddate/{enddate}Z/interval/{interval}".format(
+            endpoint=url,
+            startdate=start.isoformat(),
+            enddate=end.isoformat(),
+            interval="hour",
         )
-        end = start + timedelta(days=3)
-        async with self._session.get(
-            url, params={"start": toEpochMilliSec(start), "end": toEpochMilliSec(end)}
-        ) as resp:
+        headers = {"Authorization": "Bearer {}".format(token)}
+
+        async with self._session.get(url, headers=headers) as resp:
             resp.raise_for_status()
             return await resp.json()
 
