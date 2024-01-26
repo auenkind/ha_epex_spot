@@ -14,6 +14,13 @@
         "data": {
           "market_area": "Select market area"
         }
+      },
+      "source_credentials": {
+        "title": "Energy-Assistant Credentials",
+        "data": {
+          "source_username": "Username",
+          "source_password": "Password"
+        }
       }
     }
   },

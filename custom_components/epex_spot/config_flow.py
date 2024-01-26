@@ -13,21 +13,32 @@ from .const import (
     CONF_SOURCE_EPEX_SPOT_WEB,
     CONF_SOURCE_SMARD_DE,
     CONF_SOURCE_SMARTENERGY,
+    CONF_SOURCE_STWHAS,
     CONF_SURCHARGE_ABS,
     CONF_SURCHARGE_PERC,
     CONF_TAX,
+    CONF_SOURCE_USERNAME,
+    CONF_SOURCE_PASSWORD,
     DEFAULT_SURCHARGE_ABS,
     DEFAULT_SURCHARGE_PERC,
     DEFAULT_TAX,
     DOMAIN,
 )
-from .EPEXSpot import SMARD, Awattar, EPEXSpotWeb, smartENERGY
+from .EPEXSpot import SMARD, Awattar, EPEXSpotWeb, smartENERGY, stwhas
 
 CONF_SOURCE_LIST = (
     CONF_SOURCE_AWATTAR,
     CONF_SOURCE_EPEX_SPOT_WEB,
     CONF_SOURCE_SMARD_DE,
     CONF_SOURCE_SMARTENERGY,
+    CONF_SOURCE_STWHAS,
+)
+
+
+from homeassistant.helpers.selector import (
+    TextSelector,
+    TextSelectorConfig,
+    TextSelectorType,
 )
 
 
@@ -38,6 +49,9 @@ class EpexSpotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
 
     def __init__(self):
         self._source_name = None
+        self._market_area = None
+        self._username = None
+        self._password = None
 
     async def async_step_user(self, user_input=None):
         """Handle the start of the config flow.
@@ -68,6 +82,8 @@ class EpexSpotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
             areas = SMARD.SMARD.MARKET_AREAS
         elif self._source_name == CONF_SOURCE_SMARTENERGY:
             areas = smartENERGY.smartENERGY.MARKET_AREAS
+        elif self._source_name == CONF_SOURCE_STWHAS:
+            areas = stwhas.stwhas.MARKET_AREAS
 
         data_schema = vol.Schema(
             {vol.Required(CONF_MARKET_AREA): vol.In(sorted(areas))}
@@ -77,18 +93,51 @@ class EpexSpotConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):  # type: ign
 
     async def async_step_market_area(self, user_input=None):
         if user_input is not None:
-            # create an entry for this configuration
-            market_area = user_input[CONF_MARKET_AREA]
-            title = f"{self._source_name} ({market_area})"
+            self._market_area = user_input[CONF_MARKET_AREA]
+            if self._source_name == CONF_SOURCE_STWHAS:
+                data_schema = vol.Schema(
+                    {
+                        vol.Required(CONF_SOURCE_USERNAME): TextSelector(
+                            TextSelectorConfig(
+                                type=TextSelectorType.EMAIL, autocomplete="username"
+                            )
+                        ),
+                        vol.Required(CONF_SOURCE_PASSWORD): TextSelector(
+                            TextSelectorConfig(
+                                type=TextSelectorType.PASSWORD, autocomplete="password"
+                            )
+                        ),
+                    }
+                )
 
-            unique_id = f"{DOMAIN} {self._source_name} {market_area}"
-            await self.async_set_unique_id(unique_id)
-            self._abort_if_unique_id_configured()
+                return self.async_show_form(
+                    step_id="source_credentials", data_schema=data_schema
+                )
+            return await self.async_complete_config()
 
-            return self.async_create_entry(
-                title=title,
-                data={CONF_SOURCE: self._source_name, CONF_MARKET_AREA: market_area},
-            )
+    async def async_step_source_credentials(self, user_input=None):
+        if user_input is not None:
+            self._username = user_input[CONF_SOURCE_USERNAME]
+            self._password = user_input[CONF_SOURCE_PASSWORD]
+            return await self.async_complete_config()
+
+    async def async_complete_config(self):
+        # create an entry for this configuration
+        title = f"{self._source_name} ({self._market_area})"
+
+        unique_id = f"{DOMAIN} {self._source_name} {self._market_area}"
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured()
+
+        return self.async_create_entry(
+            title=title,
+            data={
+                CONF_SOURCE: self._source_name,
+                CONF_MARKET_AREA: self._market_area,
+                CONF_SOURCE_USERNAME: self._username,
+                CONF_SOURCE_PASSWORD: self._password,
+            },
+        )
 
     @staticmethod
     @callback
