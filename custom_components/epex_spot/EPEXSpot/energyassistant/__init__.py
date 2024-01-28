@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
+import time
 
 import aiohttp, json
 from homeassistant.util import dt
@@ -11,8 +12,15 @@ class Marketprice:
     UOM_CT_PER_kWh = "ct/kWh"
 
     def __init__(self, data):
-        # assert data["unit"].lower() == self.UOM_EUR_PER_MWh.lower()
         self._start_time = datetime.fromisoformat(data["datetime"])
+
+        # adjust this time to be in the correct timezone, the API delivery timestamps marked as Zulu time, but the contained time is in local time
+        dst = 1
+        if time.daylight > 0:
+            dst = dst + 1
+        self._start_time = self._start_time - timedelta(hours=dst)
+
+        self._interpolated = data["interpolated"]
         self._end_time = self._start_time + timedelta(hours=1)
         self._price_eur_per_kwh = data["price"]
 
@@ -103,7 +111,7 @@ class EnergyAssistant:
             return await respData
 
     async def _fetch_data(self, url, token):
-        today = datetime.now()
+        today = datetime.now() - timedelta(days=0)
         start = datetime(today.year, today.month, today.day)
         end = start + timedelta(days=2)
 
@@ -113,7 +121,7 @@ class EnergyAssistant:
             enddate=end.isoformat(),
             interval="hour",
         )
-        headers = {"Authorization": "Bearer {}".format(token)}
+        headers = {"Authorization": f"Bearer {token}"}
 
         async with self._session.get(url, headers=headers) as resp:
             resp.raise_for_status()
