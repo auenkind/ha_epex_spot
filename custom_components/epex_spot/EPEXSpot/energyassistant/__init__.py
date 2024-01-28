@@ -8,17 +8,16 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class Marketprice:
-    UOM_EUR_PER_MWh = "EUR/MWh"
     UOM_CT_PER_kWh = "ct/kWh"
 
     def __init__(self, data):
         # assert data["unit"].lower() == self.UOM_EUR_PER_MWh.lower()
         self._start_time = datetime.fromisoformat(data["datetime"])
         self._end_time = self._start_time + timedelta(hours=1)
-        self._price_ct_per_kwh = data["price"]
+        self._price_eur_per_kwh = data["price"]
 
     def __repr__(self):
-        return f"{self.__class__.__name__}(start: {self._start_time.isoformat()}, end: {self._end_time.isoformat()}, marketprice: {self._price_ct_per_kwh} {self.UOM_CT_PER_kWh})"  # noqa: E501
+        return f"{self.__class__.__name__}(start: {self._start_time.isoformat()}, end: {self._end_time.isoformat()}, marketprice: {self.price_ct_per_kwh} {self.UOM_CT_PER_kWh})"  # noqa: E501
 
     @property
     def start_time(self):
@@ -30,11 +29,15 @@ class Marketprice:
 
     @property
     def price_eur_per_mwh(self):
-        return round(self._price_ct_per_kwh * 10, 2)
+        return round(self.price_eur_per_kwh * 1000, 2)
 
     @property
     def price_ct_per_kwh(self):
-        return self._price_ct_per_kwh
+        return round(self._price_eur_per_kwh * 100, 2)
+
+    @property
+    def price_eur_per_kwh(self):
+        return self._price_eur_per_kwh
 
 
 def toEpochMilliSec(dt: datetime) -> int:
